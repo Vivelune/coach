@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model User {
+  id            String   @id @default(cuid())
+  clerkId       String   @unique
+  goal          String   @default("recomp")   // cut | bulk | recomp
+  heightCm      Float?
+  sex           String?
+  age           Int?
+  activityLevel String?
+  targetRate    Float?                         // kg per week
+  personality   String   @default("cold_analyst")
+  intensity     Int      @default(3)
+  createdAt     DateTime @default(now())
+  weights       WeightEntry[]
+  foods         FoodLog[]
+  workouts      Workout[]
+  reports       CoachReport[]
+  notes         MemoryNote[]
+}
+
+model WeightEntry {
+  id     String   @id @default(cuid())
+  userId String
+  date   DateTime @db.Date
+  kg     Float
+  user   User     @relation(fields: [userId], references: [id])
+  @@unique([userId, date])
+}
+
+model FoodLog {
+  id      String   @id @default(cuid())
+  userId  String
+  date    DateTime @db.Date
+  meal    String
+  name    String
+  kcal    Float
+  protein Float
+  carbs   Float
+  fat     Float
+  source  String   @default("manual")  // manual | usda | barcode
+  user    User     @relation(fields: [userId], references: [id])
+  @@index([userId, date])
+}
+
+model Workout {
+  id        String     @id @default(cuid())
+  userId    String
+  date      DateTime   @db.Date
+  user      User       @relation(fields: [userId], references: [id])
+  exercises Exercise[]
+  @@index([userId, date])
+}
+
+model Exercise {
+  id          String  @id @default(cuid())
+  workoutId   String
+  name        String
+  muscleGroup String
+  workout     Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  sets        WorkoutSet[]
+}
+
+model WorkoutSet {
+  id         String   @id @default(cuid())
+  exerciseId String
+  weightKg   Float
+  reps       Int
+  rpe        Float?
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+}
+
+model CoachReport {
+  id          String   @id @default(cuid())
+  userId      String
+  weekStart   DateTime @db.Date
+  status      String   @default("pending")  // pending | running | done | failed
+  statsJson   Json?
+  verdictJson Json?
+  error       String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+  @@index([status, createdAt])
+}
+
+model MemoryNote {
+  id        String   @id @default(cuid())
+  userId    String
+  text      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
